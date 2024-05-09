@@ -5,14 +5,14 @@ const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 
 dotenv.config();
+console.log('JWT_SECRET:', process.env.JWT_SECRET);
 
 const app = express();
 app.use(express.json());
 
-// Подставное значение для URL базы данных, которое можно изменить позже.
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/mydatabase';
+const MONGOURL = process.env.MONGO_URL;
 
-mongoose.connect(mongoURI, {
+mongoose.connect(MONGOURL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -22,7 +22,7 @@ mongoose.connect(mongoURI, {
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

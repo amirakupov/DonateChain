@@ -1,29 +1,25 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const authRoutes = require('./routes/authRoutes');
-const profileRoutes = require('./routes/profileRoutes');
 
 dotenv.config();
-console.log('JWT_SECRET:', process.env.JWT_SECRET);
 
-const app = express();
+const app = express(); 
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
 
-const MONGOURL = process.env.MONGO_URL;
+// Import Routes
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/user');
 
-mongoose.connect(MONGOURL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((error) => console.error('Error connecting to MongoDB:', error));
-
+// Route Middleware
 app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes);
+app.use('/api/users', userRoutes);
 
-const PORT = process.env.PORT || 8001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('Could not connect to MongoDB', err));
 
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

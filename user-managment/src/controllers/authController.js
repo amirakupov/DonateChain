@@ -1,57 +1,49 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const dotenv = require('dotenv');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-dotenv.config();
+exports.register = async (req, res) => {
+    try {
+        // Check if user already exists
+        let user = await User.findOne({ email: req.body.email });
+        if (user) return res.status(400).send('User already registered.');
 
-console.log('JWT_SECRET:', process.env.JWT_SECRET);
+        // Create new user
+        user = new User({
+            name: req.body.name,
+            email: req.body.email,
+            password: req.body.password
+        });
 
-const register = async (req, res) => {
-  const { username, password, email } = req.body;
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt);
 
+        await user.save();
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const newUser = new User({
-    username,
-    password: hashedPassword,
-    email,
-  });
-
-  try {
-    const savedUser = await newUser.save();
-    res.status(201).json(savedUser);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
+        // Generate JWT
+        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
+        res.header('x-auth-token', token).send({
+            _id: user._id,
+            name: user.name,
+            email: user.email
+        });
+    } catch (err) {
+        res.status(500).send('Something went wrong');
+    }
 };
 
-const login = async (req, res) => {
-  const { username, password } = req.body;
+exports.login = async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.body.email });
+        if (!user) return res.status(400).send('Invalid email or password.');
 
-  try {
-    const user = await User.findOne({ username });
+        const validPassword = await bcrypt.compare(req.body.password, user.password);
+        if (!validPassword) return res.status(400).send('Invalid email or password.');
 
-    if (!user) {
-      return res.status(404).json({ error: 'user was not found' });
+        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
+        res.send({ token });
+    } catch (err) {
+        res.status(500).send('Something went wrong');
     }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ error: 'wrong password' });
-    }
-
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    res.json({ token });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-module.exports = {
-  register,
-  login,
 };
